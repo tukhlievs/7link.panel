@@ -13,10 +13,11 @@ const MENU = [
   { href: "/create", label: "Create link", icon: Plus },
 ];
 
+const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL ?? "";
 const LEGAL = [
-  { href: "https://7link.click/terms", label: "Terms" },
-  { href: "https://7link.click/privacy", label: "Privacy" },
-  { href: "https://7link.click/privacy", label: "Cookies" },
+  { href: `${MARKETING_URL}/terms`, label: "Terms" },
+  { href: `${MARKETING_URL}/privacy`, label: "Privacy" },
+  { href: `${MARKETING_URL}/privacy`, label: "Cookies" },
 ];
 
 export default async function AccountPage() {

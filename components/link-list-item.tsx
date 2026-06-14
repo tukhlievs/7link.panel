@@ -32,10 +32,10 @@ export function LinkListItem({ link }: { link: LinkRow }) {
   const [pending, startTransition] = useTransition();
   const TypeIcon = TYPE_ICON[link.type];
 
-  const shortUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/l/${link.slug}`
-      : `/l/${link.slug}`;
+  const base =
+    process.env.NEXT_PUBLIC_LINK_BASE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+  const shortUrl = `${base}/l/${link.slug}`;
 
   async function copy() {
     try {
