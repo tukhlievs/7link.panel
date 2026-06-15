@@ -6,9 +6,11 @@ do $$ begin
   create type public.link_type as enum ('turnstile', 'conditions', 'password');
 exception when duplicate_object then null; end $$;
 
+-- user_id is a plain uuid (no FK to auth.users) so the demo user works in
+-- auth-stub mode without creating a real account. RLS still scopes by user_id.
 create table if not exists public.links (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid not null,
   slug text not null unique,
   title text not null default '',
   destination_url text not null,

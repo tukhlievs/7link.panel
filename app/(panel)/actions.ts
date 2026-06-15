@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { AUTH_STUB, panelContext } from "@/lib/panel-auth";
 import { generateSlug, normalizeSlug } from "@/lib/slug";
 import type { Condition, LinkType } from "@/lib/types";
 
@@ -24,11 +25,7 @@ type CreateLinkInput = {
 };
 
 export async function createLink(input: CreateLinkInput) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { client, userId } = await panelContext();
 
   const destination = normalizeUrl(input.destinationUrl);
   if (!destination) return { error: "Destination URL is required." };
@@ -49,7 +46,7 @@ export async function createLink(input: CreateLinkInput) {
   }
 
   const base = {
-    user_id: user.id,
+    user_id: userId,
     title: input.title?.trim() || "",
     destination_url: destination,
     type: input.type,
@@ -65,7 +62,7 @@ export async function createLink(input: CreateLinkInput) {
   let lastError = "";
   for (let attempt = 0; attempt < 4; attempt++) {
     const slug = custom || generateSlug();
-    const { error } = await supabase.from("links").insert({ ...base, slug });
+    const { error } = await client.from("links").insert({ ...base, slug });
     if (!error) {
       revalidatePath("/");
       redirect("/");
@@ -79,18 +76,23 @@ export async function createLink(input: CreateLinkInput) {
 }
 
 export async function deleteLink(id: string) {
-  const supabase = await createClient();
-  await supabase.from("links").delete().eq("id", id);
+  const { client, userId } = await panelContext();
+  await client.from("links").delete().eq("id", id).eq("user_id", userId);
   revalidatePath("/");
 }
 
 export async function setActive(id: string, active: boolean) {
-  const supabase = await createClient();
-  await supabase.from("links").update({ active }).eq("id", id);
+  const { client, userId } = await panelContext();
+  await client
+    .from("links")
+    .update({ active })
+    .eq("id", id)
+    .eq("user_id", userId);
   revalidatePath("/");
 }
 
 export async function signOut() {
+  if (AUTH_STUB) redirect("/");
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");

@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { Plus, LinkSimple } from "@phosphor-icons/react/dist/ssr";
-import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { LinkListItem } from "@/components/link-list-item";
+import { panelContext } from "@/lib/panel-auth";
 import type { LinkRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const { data } = await supabase
+  const { client, userId } = await panelContext();
+  const { data } = await client
     .from("links")
     .select("*")
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
   const links = (data ?? []) as LinkRow[];
 

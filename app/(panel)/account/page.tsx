@@ -5,8 +5,8 @@ import {
   SignOut,
   CaretRight,
 } from "@phosphor-icons/react/dist/ssr";
-import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/(panel)/actions";
+import { requireUser } from "@/lib/panel-auth";
 
 const MENU = [
   { href: "/", label: "Your links", icon: House },
@@ -21,14 +21,11 @@ const LEGAL = [
 ];
 
 export default async function AccountPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await requireUser();
 
-  const email = user?.email ?? "";
-  const name = (user?.user_metadata?.full_name as string | undefined) ?? email;
-  const avatar = user?.user_metadata?.avatar_url as string | undefined;
+  const email = user.email;
+  const name = user.name || email;
+  const avatar = user.avatar;
   const initial = (name || email || "?").charAt(0).toUpperCase();
 
   return (

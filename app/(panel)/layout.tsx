@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/logo";
+import { requireUser } from "@/lib/panel-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,16 +9,11 @@ export default async function PanelLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const user = await requireUser();
 
-  const email = user.email ?? "";
-  const name =
-    (user.user_metadata?.full_name as string | undefined) ?? email;
-  const avatar = user.user_metadata?.avatar_url as string | undefined;
+  const email = user.email;
+  const name = user.name || email;
+  const avatar = user.avatar;
   const initial = (name || email || "?").charAt(0).toUpperCase();
 
   return (
