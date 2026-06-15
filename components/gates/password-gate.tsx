@@ -2,28 +2,24 @@
 
 import { useState } from "react";
 import { SpinnerGap, ArrowRight } from "@phosphor-icons/react";
-import { registerClick } from "@/lib/mock-store";
+import { resolvePassword } from "@/app/l/[slug]/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { LinkRow } from "@/lib/types";
 
-export function PasswordGate({ link }: { link: LinkRow }) {
+export function PasswordGate({ slug }: { slug: string }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    if (password.trim() !== (link.password ?? "")) {
-      setError("Wrong password.");
-      return;
-    }
     setLoading(true);
-    const dest = registerClick(link.slug);
-    if (dest) window.location.href = dest;
-    else {
-      setError("This link is no longer available.");
+    setError(null);
+    const res = await resolvePassword(slug, password);
+    if ("url" in res) {
+      window.location.href = res.url;
+    } else {
+      setError(res.error);
       setLoading(false);
     }
   }

@@ -1,11 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-// Мок-режим включён по умолчанию; чтобы включить реальный вход — NEXT_PUBLIC_MOCK=false
-const MOCK = process.env.NEXT_PUBLIC_MOCK !== "false";
-
 export async function middleware(request: NextRequest) {
-  if (MOCK || process.env.NEXT_PUBLIC_AUTH_STUB === "true") {
+  // Режим заглушки: вход не требуется, сессии не проверяем
+  if (process.env.NEXT_PUBLIC_AUTH_STUB === "true") {
     if (request.nextUrl.pathname === "/login") {
       return NextResponse.redirect(new URL("/", request.url));
     }

@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { requireUser } from "@/lib/panel-auth";
 
-const DEMO = { name: "Demo", email: "demo@7link.click" };
+export const dynamic = "force-dynamic";
 
-export default function PanelLayout({
+export default async function PanelLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const initial = DEMO.name.charAt(0).toUpperCase();
+  const user = await requireUser();
+
+  const email = user.email;
+  const name = user.name || email;
+  const avatar = user.avatar;
+  const initial = (name || email || "?").charAt(0).toUpperCase();
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -24,9 +30,14 @@ export default function PanelLayout({
           <Link
             href="/account"
             aria-label="Account"
-            className="flex size-9 items-center justify-center rounded-full border border-border bg-muted text-sm font-semibold text-foreground transition-colors hover:border-primary/40"
+            className="flex size-9 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-sm font-semibold text-foreground transition-colors hover:border-primary/40"
           >
-            {initial}
+            {avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatar} alt="" className="size-full object-cover" />
+            ) : (
+              initial
+            )}
           </Link>
         </div>
       </header>

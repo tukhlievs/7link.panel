@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
   Copy,
   Check,
@@ -12,6 +12,7 @@ import {
   Play,
   ArrowSquareOut,
 } from "@phosphor-icons/react";
+import { deleteLink, setActive } from "@/app/(panel)/actions";
 import type { LinkRow, LinkType } from "@/lib/types";
 
 const TYPE_ICON: Record<LinkType, typeof ShieldCheck> = {
@@ -26,16 +27,9 @@ const TYPE_LABEL: Record<LinkType, string> = {
   password: "Password",
 };
 
-export function LinkListItem({
-  link,
-  onDelete,
-  onToggle,
-}: {
-  link: LinkRow;
-  onDelete: (id: string) => void;
-  onToggle: (id: string, active: boolean) => void;
-}) {
+export function LinkListItem({ link }: { link: LinkRow }) {
   const [copied, setCopied] = useState(false);
+  const [pending, startTransition] = useTransition();
   const TypeIcon = TYPE_ICON[link.type];
 
   const base =
@@ -91,9 +85,7 @@ export function LinkListItem({
             {link.click_count.toLocaleString("en-US")}
           </p>
           <p className="text-[11px] text-muted-foreground">
-            {link.max_clicks
-              ? `of ${link.max_clicks.toLocaleString("en-US")}`
-              : "clicks"}
+            {link.max_clicks ? `of ${link.max_clicks.toLocaleString("en-US")}` : "clicks"}
           </p>
         </div>
       </div>
@@ -114,7 +106,8 @@ export function LinkListItem({
 
         <button
           type="button"
-          onClick={() => onToggle(link.id, !link.active)}
+          disabled={pending}
+          onClick={() => startTransition(() => setActive(link.id, !link.active))}
           className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           {link.active ? <Pause size={14} weight="fill" /> : <Play size={14} weight="fill" />}
@@ -123,8 +116,11 @@ export function LinkListItem({
 
         <button
           type="button"
+          disabled={pending}
           onClick={() => {
-            if (confirm("Delete this link?")) onDelete(link.id);
+            if (confirm("Delete this link? This cannot be undone.")) {
+              startTransition(() => deleteLink(link.id));
+            }
           }}
           className="ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
         >
