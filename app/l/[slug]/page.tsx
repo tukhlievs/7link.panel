@@ -1,21 +1,20 @@
-import { ShieldCheck, ListChecks, Lock, Warning } from "@phosphor-icons/react/dist/ssr";
-import { createAdminClient } from "@/lib/supabase/admin";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import {
+  ShieldCheck,
+  ListChecks,
+  Lock,
+  Warning,
+  SpinnerGap,
+} from "@phosphor-icons/react";
 import { Logo } from "@/components/logo";
 import { TurnstileGate } from "@/components/gates/turnstile-gate";
 import { ConditionsGate } from "@/components/gates/conditions-gate";
 import { PasswordGate } from "@/components/gates/password-gate";
-import type { Condition, LinkType } from "@/lib/types";
-
-export const dynamic = "force-dynamic";
-
-type LinkMeta = {
-  title: string;
-  type: LinkType;
-  max_clicks: number | null;
-  click_count: number;
-  conditions: Condition[];
-  active: boolean;
-};
+import { getLinkBySlug } from "@/lib/mock-store";
+import type { LinkRow, LinkType } from "@/lib/types";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -31,19 +30,11 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Notice({
-  icon,
-  title,
-  text,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
+function Notice({ title, text }: { title: string; text: string }) {
   return (
     <div className="flex flex-col items-center text-center">
       <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-        {icon}
+        <Warning size={26} weight="duotone" />
       </span>
       <h1 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
         {title}
@@ -53,7 +44,10 @@ function Notice({
   );
 }
 
-const HEADINGS: Record<LinkType, { icon: React.ReactNode; title: string; text: string }> = {
+const HEADINGS: Record<
+  LinkType,
+  { icon: React.ReactNode; title: string; text: string }
+> = {
   turnstile: {
     icon: <ShieldCheck size={26} weight="duotone" />,
     title: "Quick security check",
@@ -71,26 +65,29 @@ const HEADINGS: Record<LinkType, { icon: React.ReactNode; title: string; text: s
   },
 };
 
-export default async function RedirectPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("links")
-    .select("title, type, max_clicks, click_count, conditions, active")
-    .eq("slug", slug)
-    .maybeSingle();
+export default function RedirectPage() {
+  const params = useParams();
+  const slug = String(params.slug ?? "");
+  const [link, setLink] = useState<LinkRow | null | undefined>(undefined);
 
-  const link = data as LinkMeta | null;
+  useEffect(() => {
+    setLink(getLinkBySlug(slug) ?? null);
+  }, [slug]);
+
+  if (link === undefined) {
+    return (
+      <Shell>
+        <div className="flex items-center justify-center py-6 text-muted-foreground">
+          <SpinnerGap size={22} className="animate-spin" />
+        </div>
+      </Shell>
+    );
+  }
 
   if (!link || !link.active) {
     return (
       <Shell>
         <Notice
-          icon={<Warning size={26} weight="duotone" />}
           title="Link not available"
           text="This link doesn't exist or has been paused by its owner."
         />
@@ -102,7 +99,6 @@ export default async function RedirectPage({
     return (
       <Shell>
         <Notice
-          icon={<Warning size={26} weight="duotone" />}
           title="This link is closed"
           text="It has reached the maximum number of visitors."
         />
@@ -111,7 +107,6 @@ export default async function RedirectPage({
   }
 
   const head = HEADINGS[link.type];
-  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
   return (
     <Shell>
@@ -126,13 +121,9 @@ export default async function RedirectPage({
       </div>
 
       <div className="mt-7 flex justify-center">
-        {link.type === "turnstile" && (
-          <TurnstileGate slug={slug} siteKey={siteKey} />
-        )}
-        {link.type === "conditions" && (
-          <ConditionsGate slug={slug} conditions={link.conditions ?? []} />
-        )}
-        {link.type === "password" && <PasswordGate slug={slug} />}
+        {link.type === "turnstile" && <TurnstileGate link={link} />}
+        {link.type === "conditions" && <ConditionsGate link={link} />}
+        {link.type === "password" && <PasswordGate link={link} />}
       </div>
     </Shell>
   );

@@ -2,19 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Check, ArrowSquareOut, SpinnerGap } from "@phosphor-icons/react";
-import { resolveConditions } from "@/app/l/[slug]/actions";
-import type { Condition } from "@/lib/types";
+import { registerClick } from "@/lib/mock-store";
+import type { LinkRow } from "@/lib/types";
 
-export function ConditionsGate({
-  slug,
-  conditions,
-}: {
-  slug: string;
-  conditions: Condition[];
-}) {
+export function ConditionsGate({ link }: { link: LinkRow }) {
+  const conditions = link.conditions ?? [];
   const [done, setDone] = useState<boolean[]>(() => conditions.map(() => false));
   const [seconds, setSeconds] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const allDone = done.length > 0 && done.every(Boolean);
@@ -24,7 +18,6 @@ export function ConditionsGate({
     setDone((prev) => prev.map((v, j) => (j === i ? true : v)));
   }
 
-  // Когда все ссылки открыты — запускаем обратный отсчёт 3 секунды
   useEffect(() => {
     if (allDone && seconds === null) setSeconds(3);
   }, [allDone, seconds]);
@@ -32,19 +25,14 @@ export function ConditionsGate({
   useEffect(() => {
     if (seconds === null) return;
     if (seconds <= 0) {
-      setLoading(true);
-      resolveConditions(slug).then((res) => {
-        if ("url" in res) window.location.href = res.url;
-        else {
-          setError(res.error);
-          setLoading(false);
-        }
-      });
+      const dest = registerClick(link.slug);
+      if (dest) window.location.href = dest;
+      else setError("This link is no longer available.");
       return;
     }
     const t = setTimeout(() => setSeconds((s) => (s ?? 1) - 1), 1000);
     return () => clearTimeout(t);
-  }, [seconds, slug]);
+  }, [seconds, link.slug]);
 
   return (
     <div className="w-full">
@@ -78,11 +66,9 @@ export function ConditionsGate({
           <p className="text-muted-foreground">Open every link to continue.</p>
         )}
         {allDone && seconds !== null && seconds > 0 && (
-          <p className="text-muted-foreground">
-            Redirecting in {seconds}s…
-          </p>
+          <p className="text-muted-foreground">Redirecting in {seconds}s…</p>
         )}
-        {(loading || (allDone && seconds === 0)) && (
+        {allDone && seconds === 0 && !error && (
           <p className="inline-flex items-center gap-2 text-muted-foreground">
             <SpinnerGap size={16} className="animate-spin" />
             Redirecting…

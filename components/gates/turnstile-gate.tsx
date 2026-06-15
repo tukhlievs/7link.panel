@@ -1,89 +1,64 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { SpinnerGap, ShieldCheck } from "@phosphor-icons/react";
-import { resolveTurnstile } from "@/app/l/[slug]/actions";
+import { useState } from "react";
+import { SpinnerGap, Check, Cloud } from "@phosphor-icons/react";
+import { registerClick } from "@/lib/mock-store";
+import type { LinkRow } from "@/lib/types";
 
-type TurnstileApi = {
-  render: (
-    el: HTMLElement,
-    opts: { sitekey: string; callback: (token: string) => void },
-  ) => string;
-  reset: (id?: string) => void;
-  remove: (id?: string) => void;
-};
+export function TurnstileGate({ link }: { link: LinkRow }) {
+  const [state, setState] = useState<"idle" | "checking" | "done" | "error">(
+    "idle",
+  );
 
-declare global {
-  interface Window {
-    turnstile?: TurnstileApi;
+  function verify() {
+    if (state !== "idle") return;
+    setState("checking");
+    setTimeout(() => {
+      const dest = registerClick(link.slug);
+      if (dest) {
+        setState("done");
+        window.location.href = dest;
+      } else {
+        setState("error");
+      }
+    }, 900);
   }
-}
-
-export function TurnstileGate({
-  slug,
-  siteKey,
-}: {
-  slug: string;
-  siteKey: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [status, setStatus] = useState<"idle" | "verifying" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let widgetId: string | undefined;
-
-    function render() {
-      if (!window.turnstile || !ref.current) return;
-      widgetId = window.turnstile.render(ref.current, {
-        sitekey: siteKey,
-        callback: async (token: string) => {
-          setStatus("verifying");
-          setError(null);
-          const res = await resolveTurnstile(slug, token);
-          if ("url" in res) {
-            window.location.href = res.url;
-          } else {
-            setError(res.error);
-            setStatus("error");
-            window.turnstile?.reset(widgetId);
-          }
-        },
-      });
-    }
-
-    if (window.turnstile) {
-      render();
-    } else {
-      const s = document.createElement("script");
-      s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-      s.async = true;
-      s.defer = true;
-      s.onload = render;
-      document.head.appendChild(s);
-    }
-
-    return () => {
-      if (widgetId && window.turnstile) window.turnstile.remove(widgetId);
-    };
-  }, [slug, siteKey]);
 
   return (
-    <div className="flex flex-col items-center">
-      <div ref={ref} className="min-h-[65px]" />
-      {status === "verifying" && (
-        <p className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <SpinnerGap size={16} className="animate-spin" />
-          Verifying and redirecting…
+    <div className="w-full">
+      <button
+        type="button"
+        onClick={verify}
+        className="flex w-full items-center gap-3 rounded-xl border border-border bg-background px-4 py-4 text-left transition-colors hover:border-primary/40"
+      >
+        <span
+          className={`flex size-6 items-center justify-center rounded-md border ${
+            state === "done"
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border text-transparent"
+          }`}
+        >
+          {state === "checking" ? (
+            <SpinnerGap size={14} className="animate-spin text-primary" />
+          ) : (
+            <Check size={13} weight="bold" />
+          )}
+        </span>
+        <span className="flex-1 text-sm font-medium text-foreground">
+          {state === "checking" || state === "done"
+            ? "Verifying…"
+            : "Verify you are human"}
+        </span>
+        <span className="flex items-center gap-1.5 text-muted-foreground">
+          <Cloud size={16} weight="fill" />
+          <span className="text-[11px]">Turnstile</span>
+        </span>
+      </button>
+      {state === "error" && (
+        <p className="mt-4 text-center text-sm text-destructive">
+          This link is no longer available.
         </p>
       )}
-      {status === "idle" && (
-        <p className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground">
-          <ShieldCheck size={16} weight="fill" className="text-primary" />
-          Complete the check to continue
-        </p>
-      )}
-      {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
     </div>
   );
 }

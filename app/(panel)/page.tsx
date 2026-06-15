@@ -1,20 +1,35 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, LinkSimple } from "@phosphor-icons/react/dist/ssr";
+import { Plus, LinkSimple } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { LinkListItem } from "@/components/link-list-item";
-import { panelContext } from "@/lib/panel-auth";
+import {
+  getLinks,
+  deleteLink as deleteMock,
+  setActive as setActiveMock,
+} from "@/lib/mock-store";
 import type { LinkRow } from "@/lib/types";
 
-export const dynamic = "force-dynamic";
+export default function HomePage() {
+  const [links, setLinks] = useState<LinkRow[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-export default async function HomePage() {
-  const { client, userId } = await panelContext();
-  const { data } = await client
-    .from("links")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-  const links = (data ?? []) as LinkRow[];
+  useEffect(() => {
+    setLinks(getLinks());
+    setLoaded(true);
+  }, []);
+
+  function handleDelete(id: string) {
+    deleteMock(id);
+    setLinks(getLinks());
+  }
+
+  function handleToggle(id: string, active: boolean) {
+    setActiveMock(id, active);
+    setLinks(getLinks());
+  }
 
   return (
     <div>
@@ -24,8 +39,8 @@ export default async function HomePage() {
             Your links
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {links.length} {links.length === 1 ? "link" : "links"} · protected
-            by 7Link
+            {loaded ? links.length : 0}{" "}
+            {links.length === 1 ? "link" : "links"} · protected by 7Link
           </p>
         </div>
         <Button
@@ -37,7 +52,7 @@ export default async function HomePage() {
         </Button>
       </div>
 
-      {links.length === 0 ? (
+      {loaded && links.length === 0 ? (
         <div className="card-designer mt-8 flex flex-col items-center rounded-2xl px-6 py-16 text-center">
           <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <LinkSimple size={24} weight="duotone" />
@@ -59,7 +74,12 @@ export default async function HomePage() {
       ) : (
         <div className="mt-6 space-y-3">
           {links.map((link) => (
-            <LinkListItem key={link.id} link={link} />
+            <LinkListItem
+              key={link.id}
+              link={link}
+              onDelete={handleDelete}
+              onToggle={handleToggle}
+            />
           ))}
         </div>
       )}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
   ListChecks,
@@ -12,7 +13,7 @@ import {
   CaretRight,
   SpinnerGap,
 } from "@phosphor-icons/react";
-import { createLink } from "@/app/(panel)/actions";
+import { createLink } from "@/lib/mock-store";
 import { TYPE_META, type Condition, type LinkType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ const CATEGORIES: { type: LinkType; icon: typeof ShieldCheck }[] = [
 ];
 
 export default function CreatePage() {
+  const router = useRouter();
   const [type, setType] = useState<LinkType | null>(null);
   const [destination, setDestination] = useState("");
   const [title, setTitle] = useState("");
@@ -37,12 +39,29 @@ export default function CreatePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!type) return;
     setError(null);
+
+    if (!destination.trim()) {
+      setError("Destination URL is required.");
+      return;
+    }
+    if (type === "password" && !password.trim()) {
+      setError("Password is required for this link type.");
+      return;
+    }
+    if (
+      type === "conditions" &&
+      conditions.filter((c) => c.url.trim()).length === 0
+    ) {
+      setError("Add at least one condition link.");
+      return;
+    }
+
     setLoading(true);
-    const res = await createLink({
+    createLink({
       type,
       destinationUrl: destination,
       title,
@@ -51,10 +70,7 @@ export default function CreatePage() {
       conditions,
       password,
     });
-    if (res?.error) {
-      setError(res.error);
-      setLoading(false);
-    }
+    router.push("/");
   }
 
   if (!type) {
