@@ -20,20 +20,10 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleGoogle() {
+  function handleGoogle() {
     setError(null);
     setGoogleLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) {
-      setError(error.message);
-      setGoogleLoading(false);
-    }
+    window.location.assign(`/auth/sign-in${window.location.search}`);
   }
 
   async function handleEmail(e: React.FormEvent) {
